@@ -11,20 +11,20 @@ import java.util.stream.Stream;
  */
 public enum Operator {
   // Unary operator
-  NOT("!", 5, Associativity.RIGHT, 1, args -> !args[0]),
+  NOT("!", 5, Associativity.RIGHT, 1, args -> !args[0].value()),
 
   // Binary operators (higher precedence -> evaluated earlier)
-  AND("&", 4, Associativity.LEFT, 2, args -> args[0] && args[1]),
-  NAND("/", 4, Associativity.LEFT, 2, args -> !(args[0] && args[1])), // Sheffer stroke
+  AND("&", 4, Associativity.LEFT, 2, args -> args[0].value() && args[1].value()),
+  NAND("/", 4, Associativity.LEFT, 2, args -> !(args[0].value() && args[1].value())), // Sheffer stroke
 
-  OR("|", 3, Associativity.LEFT, 2, args -> args[0] || args[1]),
-  XOR("^", 3, Associativity.LEFT, 2, args -> args[0] ^ args[1]),      // Exclusive OR
-  NOR("\\", 3, Associativity.LEFT, 2, args -> !(args[0] || args[1])), // Peirce's arrow
+  OR("|", 3, Associativity.LEFT, 2, args -> args[0].value() || args[1].value()),
+  XOR("^", 3, Associativity.LEFT, 2, args -> args[0].value() ^ args[1].value()),      // Exclusive OR
+  NOR("\\", 3, Associativity.LEFT, 2, args -> !(args[0].value() || args[1].value())), // Peirce's arrow
 
-  IMPLIES("->", 2, Associativity.RIGHT, 2, args -> !args[0] ||
-      args[1]), // Implication (right associativity is important!)
+  IMPLIES("->", 2, Associativity.RIGHT, 2, args -> !args[0].value() ||
+      args[1].value()), // Implication (right associativity is important!)
 
-  EQUIV("<->", 1, Associativity.LEFT, 2, args -> args[0] == args[1]); // Equivalence
+  EQUIV("<->", 1, Associativity.LEFT, 2, args -> args[0].value() == args[1].value()); // Equivalence
 
   public static final int MAX_OPERATOR_LENGTH = 3;
 
@@ -154,7 +154,7 @@ public enum Operator {
    * @throws IllegalArgumentException
    *     if the number of arguments does not match the arity of the operator
    */
-  public boolean apply(boolean... args) {
+  public boolean apply(LogicalVariable... args) {
     if (args.length != arity) {
       throw new IllegalArgumentException("Incorrect number of arguments for operator " + symbol);
     }
@@ -175,7 +175,7 @@ public enum Operator {
      *
      * @return the result of the boolean operation
      */
-    boolean apply(boolean... args);
+    boolean apply(LogicalVariable... args);
 
   }
 }

@@ -1,159 +1,216 @@
 package com.nbugaenco.ttg.service;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.nbugaenco.ttg.model.LogicalVariable;
 import com.nbugaenco.ttg.model.Operator;
 
 /**
- * The RPNEvaluator class provides methods to evaluate a logical expression
- * in Reverse Polish Notation (RPN) and extract variables from a list of tokens.
+ * The RPNEvaluator is a utility class for evaluating logical expressions provided in
+ * Reverse Polish Notation (RPN) and extracting variables from a tokenized expression.
+ * <p>
+ * This class should not be instantiated.
+ * </p>
  */
 public class RPNEvaluator {
 
   /**
-   * Private constructor to prevent instantiation of this utility class.
+   * Private constructor to prevent instantiation.
    */
   private RPNEvaluator() {
     throw new IllegalStateException("Utility class");
   }
 
   /**
-   * Extracts variables from a list of tokens.
+   * Extracts unique variable names from the provided list of tokens.
    *
    * @param tokens
-   *     the list of tokens to process
+   *     the list of tokens obtained from a logical expression
    *
-   * @return a set of unique variable names found in the tokens
+   * @return a set of variable names appearing in the expression
    */
   public static Set<String> extractVariables(List<String> tokens) {
     return tokens.stream().filter(RPNEvaluator::isVariable).collect(Collectors.toSet());
   }
 
   /**
-   * Checks if a token is a variable.
+   * Checks if the provided token is a valid variable.
    *
    * @param token
-   *     the token to check
+   *     the token to be checked
    *
-   * @return true if the token is a variable, false otherwise
+   * @return true if token is a single uppercase character, false otherwise
    */
   private static boolean isVariable(String token) {
     return token.length() == 1 && Character.isUpperCase(token.charAt(0));
   }
 
   /**
-   * Evaluates a logical expression in Reverse Polish Notation (RPN).
+   * Evaluates a logical expression written in Reverse Polish Notation.
+   * <p>
+   * The method uses a stack-based approach to compute the result of the expression,
+   * tracking the evaluation path by appending intermediate results.
+   * </p>
    *
    * @param rpnTokens
-   *     the list of tokens in RPN order
+   *     the tokens representing the RPN expression
    * @param variableValues
-   *     a map of variable names to their boolean values
+   *     the list of LogicalVariable objects holding variable values
    *
-   * @return the result of the evaluation as a boolean
+   * @return a list of LogicalVariable objects detailing the evaluation process and final result
    *
    * @throws IllegalArgumentException
-   *     if an unexpected token is encountered or if there are insufficient operands
+   *     if an unexpected token is encountered or operand count is insufficient
    */
-  public static boolean evaluate(List<String> rpnTokens, Map<String, Boolean> variableValues) {
-    Deque<Boolean> operandStack = new ArrayDeque<>();
+  public static List<LogicalVariable> evaluate(List<String> rpnTokens, List<LogicalVariable> variableValues) {
+    Deque<LogicalVariable> operandStack = new ArrayDeque<>();
+    List<LogicalVariable> calculationPath = new ArrayList<>(variableValues);
 
-    rpnTokens.forEach(token -> processToken(token, operandStack, variableValues));
+    rpnTokens.forEach(token -> processToken(token, operandStack, variableValues, calculationPath));
 
     validateFinalStack(operandStack);
 
-    return operandStack.pop();
+    return calculationPath;
   }
 
   /**
-   * Processes a token during RPN evaluation.
+   * Processes each token during the evaluation of the RPN expression.
    *
    * @param token
-   *     the token to process
+   *     the token to process (either a variable or an operator)
    * @param operandStack
-   *     the stack of operands
+   *     the stack containing intermediate LogicalVariable results
    * @param variableValues
-   *     a map of variable names to their boolean values
+   *     the list of LogicalVariable objects with initial variable assignments
+   * @param calculationPath
+   *     the list where the evaluation path is recorded
    *
    * @throws IllegalArgumentException
-   *     if an unexpected token is encountered
+   *     if token is unrecognized or operand count for an operator is insufficient
    */
-  private static void processToken(String token, Deque<Boolean> operandStack, Map<String, Boolean> variableValues) {
+  private static void processToken(String token, Deque<LogicalVariable> operandStack,
+      List<LogicalVariable> variableValues, final List<LogicalVariable> calculationPath) {
     if (isVariable(token)) {
       handleVariableToken(token, operandStack, variableValues);
     } else if (Operator.isOperatorSymbol(token)) {
-      handleOperatorToken(token, operandStack);
+      handleOperatorToken(token, operandStack, calculationPath);
     } else {
       throw new IllegalArgumentException("Unexpected token in RPN evaluation: " + token);
     }
   }
 
   /**
-   * Validates the final state of the operand stack after RPN evaluation.
+   * Validates that the operand stack contains exactly one result after evaluation.
    *
    * @param operandStack
-   *     the stack of operands
+   *     the stack containing evaluation results
    *
    * @throws IllegalArgumentException
-   *     if the stack does not end with a single result
+   *     if the stack does not contain exactly one LogicalVariable result
    */
-  private static void validateFinalStack(Deque<Boolean> operandStack) {
+  private static void validateFinalStack(Deque<LogicalVariable> operandStack) {
     if (operandStack.size() != 1) {
       throw new IllegalArgumentException("Evaluation error: stack did not end with a single result.");
     }
   }
 
   /**
-   * Handles a variable token during RPN evaluation.
+   * Processes a variable token by verifying its existence.
    *
    * @param token
-   *     the variable token to handle
+   *     the variable token to process
    * @param operandStack
-   *     the stack of operands
+   *     the current stack of operands
    * @param variableValues
-   *     a map of variable names to their boolean values
+   *     the list of known LogicalVariable assignments
    *
    * @throws IllegalArgumentException
-   *     if the variable is unknown
+   *     if the variable is not part of the provided assignments
    */
-  private static void handleVariableToken(String token, Deque<Boolean> operandStack,
-      Map<String, Boolean> variableValues) {
-    if (!variableValues.containsKey(token)) {
+  private static void handleVariableToken(String token, Deque<LogicalVariable> operandStack,
+      List<LogicalVariable> variableValues) {
+    if (variableValues.stream().map(LogicalVariable::expression).noneMatch(token::equals)) {
       throw new IllegalArgumentException("Unknown variable during evaluation: " + token);
     }
 
-    operandStack.push(variableValues.get(token));
+    operandStack.push(variableValues
+        .stream()
+        .filter(logicalVariable -> logicalVariable.expression().equals(token))
+        .findFirst()
+        .orElse(null));
   }
 
   /**
-   * Handles an operator token during RPN evaluation.
+   * Processes an operator token by applying it to the required number of operands.
    *
    * @param token
-   *     the operator token to handle
+   *     the operator token to process
    * @param operandStack
-   *     the stack of operands
+   *     the stack containing operands
+   * @param calculationPath
+   *     the list recording the steps of evaluation
    *
    * @throws IllegalArgumentException
-   *     if there are insufficient operands for the operator
+   *     if insufficient operands are available for the operator
    */
-  private static void handleOperatorToken(String token, Deque<Boolean> operandStack) {
+  private static void handleOperatorToken(String token, Deque<LogicalVariable> operandStack,
+      final List<LogicalVariable> calculationPath) {
     Operator op = Operator.fromSymbol(token);
 
     if (operandStack.size() < op.getArity()) {
       throw new IllegalArgumentException("Insufficient operands for operator: " + op.getSymbol());
     }
 
-    boolean[] args = new boolean[op.getArity()];
+    LogicalVariable[] args = new LogicalVariable[op.getArity()];
     for (int i = op.getArity() - 1; i >= 0; i--) {
       args[i] = operandStack.pop();
     }
 
     boolean result = op.apply(args);
-    operandStack.push(result);
+    final LogicalVariable logicalVariable = buildLogicalVariable(op, args, result);
+    calculationPath.add(logicalVariable);
+    operandStack.push(logicalVariable);
+  }
+
+  /**
+   * Constructs a LogicalVariable representing the result of applying an operator to its arguments.
+   *
+   * @param op
+   *     the operator being applied
+   * @param args
+   *     the array of LogicalVariable operands for the operator
+   * @param result
+   *     the boolean result from applying the operator
+   *
+   * @return a new LogicalVariable encapsulating the expression and its evaluated result
+   */
+  private static LogicalVariable buildLogicalVariable(final Operator op, final LogicalVariable[] args,
+      final boolean result) {
+    StringBuilder expression = new StringBuilder();
+
+    if (op.getArity() == 1) {
+      expression.append("!").append(args[0].expression());
+    } else {
+      if (args.length > 1) {
+        expression.append("(");
+      }
+      for (int i = 0; i < args.length; i++) {
+        expression.append(args[i].expression());
+        if (i < args.length - 1) {
+          expression.append(" ").append(op.getSymbol()).append(" ");
+        }
+      }
+      if (args.length > 1) {
+        expression.append(")");
+      }
+    }
+
+    return new LogicalVariable(expression.toString(), result);
   }
 
 }

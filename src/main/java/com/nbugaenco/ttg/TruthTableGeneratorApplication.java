@@ -49,7 +49,6 @@ public class TruthTableGeneratorApplication {
     }
 
     try {
-      System.out.println("\nGenerating Truth Table for: " + inputExpression + "\n");
       TruthTableGenerator generator = new TruthTableGenerator(inputExpression);
       generator.generateTable();
     } catch (IllegalArgumentException e) {

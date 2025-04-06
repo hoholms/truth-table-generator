@@ -2,16 +2,16 @@ package com.nbugaenco.ttg.service;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
+import com.github.freva.asciitable.AsciiTable;
+import com.nbugaenco.ttg.model.LogicalVariable;
+
 /**
- * The TruthTableGenerator class is responsible for generating a truth table
- * for a given logical expression. It tokenizes the expression, parses it into
- * Reverse Polish Notation (RPN), and evaluates the expression for all possible
- * combinations of variable assignments.
+ * The TruthTableGenerator class generates a truth table for a given logical expression.
+ * It tokenizes the input, converts it to Reverse Polish Notation (RPN), and evaluates the
+ * expression for every possible combination of logical variable assignments.
  */
 public class TruthTableGenerator {
 
@@ -21,11 +21,13 @@ public class TruthTableGenerator {
   private final List<String> variables;
 
   /**
-   * Constructs a new TruthTableGenerator with a given logical expression.
-   * Tokenizes the expression, parses it into RPN form, and extracts found variables.
+   * Constructs a TruthTableGenerator that parses the provided logical expression.
+   * <p>
+   * The expression is tokenized, converted to RPN, and variables are identified and sorted.
+   * </p>
    *
    * @param expression
-   *     the logical expression to be processed
+   *     the logical expression to process; must be non-null and well-formed
    *
    * @throws IllegalArgumentException
    *     if the expression is invalid or contains unexpected tokens
@@ -45,71 +47,103 @@ public class TruthTableGenerator {
 
   /**
    * Generates and prints the truth table for the logical expression.
-   * It prints the header and iterates over all possible variable assignments
-   * to evaluate and print the result for each combination.
+   * <p>
+   * This method outputs the table header and evaluates the expression for all possible
+   * truth assignments, printing the resulting table using ASCII formatting.
+   * </p>
    */
   public void generateTable() {
+    System.out.printf("%nGenerating Truth Table for: %s%n%n", expression);
+
     int numVars = variables.size();
 
-    printHeader(numVars);
-    printRows(numVars);
+    final List<List<LogicalVariable>> result = calculateTable(numVars);
+
+    AsciiTable
+        .builder()
+        .border(AsciiTable.FANCY_ASCII)
+        .header(toHeaders(result))
+        .data(toValues(result))
+        .writeTo(System.out);
   }
 
   /**
-   * Prints the header of the truth table, including variable names and the expression.
+   * Calculates the truth table for the logical expression.
+   * <p>
+   * This method generates all possible combinations of logical variable assignments
+   * and evaluates the expression for each combination.
+   * </p>
    *
    * @param numVars
-   *     the number of variables in the expression
+   *     the number of logical variables in the expression
+   *
+   * @return a list of lists containing the evaluated logical variables for each combination
    */
-  private void printHeader(int numVars) {
-    for (String variable : variables) {
-      System.out.printf("%-5s | ", variable);
-    }
-    System.out.printf("%s%n", expression);
-    printSeparator(numVars);
-  }
+  private List<List<LogicalVariable>> calculateTable(final int numVars) {
+    final List<List<LogicalVariable>> resultList = new ArrayList<>();
 
-  /**
-   * Prints the rows of the truth table, evaluating the expression for each combination
-   * of variable assignments.
-   *
-   * @param numVars
-   *     the number of variables in the expression
-   */
-  private void printRows(int numVars) {
     int numRows = 1 << numVars;
     for (int i = 0; i < numRows; i++) {
-      Map<String, Boolean> currentValues = new HashMap<>();
+      List<LogicalVariable> currentValues = new ArrayList<>();
       for (int j = 0; j < numVars; j++) {
         boolean value = ((i >> (numVars - 1 - j)) & 1) == 1;
-        currentValues.put(variables.get(j), value);
-        System.out.printf("%-5s | ", value ? "1" : "0");
+        currentValues.add(new LogicalVariable(variables.get(j), value));
       }
 
       try {
-        boolean result = RPNEvaluator.evaluate(rpnExpression, currentValues);
-        System.out.printf("%s%n", result ? "1" : "0");
+        List<LogicalVariable> result = RPNEvaluator.evaluate(rpnExpression, currentValues);
+        resultList.add(result);
       } catch (Exception e) {
         System.out.printf("Eval Error: %s%n", e.getMessage());
       }
     }
+
+    return resultList;
   }
 
   /**
-   * Prints a separator line for the truth table header.
+   * Extracts the headers for the truth table from the evaluated logical variables.
+   * <p>
+   * This method retrieves the expressions of the logical variables to be used as headers
+   * for the truth table.
+   * </p>
    *
-   * @param numVars
-   *     the number of variables in the expression
+   * @param result
+   *     the list of lists containing the evaluated logical variables
+   *
+   * @return an array of strings representing the headers of the truth table
    */
-  private void printSeparator(int numVars) {
-    for (int j = 0; j < numVars; j++) {
-      System.out.print("------+-");
-    }
-    int exprWidth = Math.max(expression.length(), 10);
-    for (int k = 0; k < exprWidth; k++) {
-      System.out.print("-");
-    }
-    System.out.println();
+  private String[] toHeaders(final List<List<LogicalVariable>> result) {
+    return result
+        .stream()
+        .findFirst()
+        .orElseGet(Collections::emptyList)
+        .stream()
+        .map(LogicalVariable::expression)
+        .toArray(String[]::new);
+  }
+
+  /**
+   * Converts the evaluated logical variables to a 2D array of values.
+   * <p>
+   * This method maps the boolean values of the logical variables to integers (1 for true, 0 for false)
+   * and collects them into a 2D array.
+   * </p>
+   *
+   * @param result
+   *     the list of lists containing the evaluated logical variables
+   *
+   * @return a 2D array of integer values representing the truth table
+   */
+  private Integer[][] toValues(final List<List<LogicalVariable>> result) {
+    return result
+        .stream()
+        .map(list -> list
+            .stream()
+            .map(LogicalVariable::value)
+            .map(val -> Boolean.TRUE.equals(val) ? 1 : 0)
+            .toArray(Integer[]::new))
+        .toArray(Integer[][]::new);
   }
 
 }
