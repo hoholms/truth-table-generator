@@ -31,7 +31,7 @@ public class Tokenizer {
    */
   public static List<String> tokenize(String expression) {
     List<String> tokens = new ArrayList<>();
-    String expr = removeWhitespace(expression);
+    String expr = removeWhitespaceAndRedundantNegation(expression);
     int index = 0;
 
     while (index < expr.length()) {
@@ -49,15 +49,18 @@ public class Tokenizer {
   }
 
   /**
-   * Removes all whitespace characters from the given expression.
+   * Removes all whitespace characters and redundant negations from the given expression.
+   * <p>
+   * This method processes the input logical expression by removing all whitespace
+   * characters and replacing double negations ("!!") with an empty string.
    *
    * @param expression
-   *     the expression from which to remove whitespace
+   *     the logical expression to be processed
    *
-   * @return the expression without whitespace
+   * @return the processed expression without whitespace and redundant negations
    */
-  private static String removeWhitespace(String expression) {
-    return expression.replaceAll("\\s+", "");
+  private static String removeWhitespaceAndRedundantNegation(String expression) {
+    return expression.replaceAll("\\s+", "").replace("!!", "");
   }
 
   /**

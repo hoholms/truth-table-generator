@@ -22,7 +22,7 @@ public enum Operator {
   NOR("\\", 3, Associativity.LEFT, 2, args -> !(args[0].value() || args[1].value())), // Peirce's arrow
 
   IMPLIES("->", 2, Associativity.RIGHT, 2, args -> !args[0].value() ||
-      args[1].value()), // Implication (right associativity is important!)
+      args[1].value()), // Implication (right associativity is important! A -> B -> C = A -> (B -> C))
 
   EQUIV("<->", 1, Associativity.LEFT, 2, args -> args[0].value() == args[1].value()); // Equivalence
 

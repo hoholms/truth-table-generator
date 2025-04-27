@@ -59,12 +59,14 @@ public class TruthTableGenerator {
 
     final List<List<LogicalVariable>> result = calculateTable(numVars);
 
-    AsciiTable
-        .builder()
-        .border(AsciiTable.FANCY_ASCII)
-        .header(toHeaders(result))
-        .data(toValues(result))
-        .writeTo(System.out);
+    if (!result.isEmpty()) {
+      AsciiTable
+          .builder()
+          .border(AsciiTable.FANCY_ASCII)
+          .header(toHeaders(result))
+          .data(toValues(result))
+          .writeTo(System.out);
+    }
   }
 
   /**
@@ -94,7 +96,7 @@ public class TruthTableGenerator {
         List<LogicalVariable> result = RPNEvaluator.evaluate(rpnExpression, currentValues);
         resultList.add(result);
       } catch (Exception e) {
-        System.out.printf("Eval Error: %s%n", e.getMessage());
+        System.err.printf("Eval Error: %s%n", e.getMessage());
       }
     }
 
